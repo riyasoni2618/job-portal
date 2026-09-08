@@ -5,12 +5,10 @@ import { useSelector } from 'react-redux';
 const LatestJobs = () => {
     const { allJobs } = useSelector(store => store.job);
 
-    // Prioritize jobs that have actual company logos, followed by remaining jobs
+    // Display only the latest 6 jobs returned by the API
     const displayJobs = useMemo(() => {
         if (!allJobs || allJobs.length === 0) return [];
-        const withLogo = allJobs.filter(job => Boolean(job?.company?.logo));
-        const withoutLogo = allJobs.filter(job => !Boolean(job?.company?.logo));
-        return [...withLogo, ...withoutLogo].slice(0, 6);
+        return allJobs.slice(0, 6);
     }, [allJobs]);
    
     return (

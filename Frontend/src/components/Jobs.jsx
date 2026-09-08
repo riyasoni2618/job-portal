@@ -8,11 +8,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useGetAllJobs from '@/hooks/useGetAllJobs';
 import { MapPin, Briefcase, IndianRupee, Search, SearchX, RotateCcw, X, SlidersHorizontal } from 'lucide-react';
 import { Button } from './ui/button';
+import Pagination from './shared/Pagination';
 
 const Jobs = () => {
     useGetAllJobs();
     const dispatch = useDispatch();
     const { allJobs, searchedQuery } = useSelector(store => store.job);
+
+    const JOBS_PER_PAGE = 12;
+    const [currentPage, setCurrentPage] = useState(1);
 
     const [selectedFilters, setSelectedFilters] = useState({
         location: "",
@@ -115,6 +119,26 @@ const Jobs = () => {
         });
     }, [allJobs, selectedFilters, searchedQuery]);
 
+    // Reset current page to 1 whenever search query or filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedFilters, searchedQuery]);
+
+    const totalPages = Math.ceil(filterJobs.length / JOBS_PER_PAGE);
+
+    // Keep currentPage within bounds if total pages changes
+    useEffect(() => {
+        if (totalPages > 0 && currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [totalPages, currentPage]);
+
+    // Slice 12 jobs for the current active page
+    const paginatedJobs = useMemo(() => {
+        const startIndex = (currentPage - 1) * JOBS_PER_PAGE;
+        return filterJobs.slice(startIndex, startIndex + JOBS_PER_PAGE);
+    }, [filterJobs, currentPage]);
+
     const handleFilterChange = (key, value) => {
         setSelectedFilters(prev => ({
             ...prev,
@@ -188,8 +212,10 @@ const Jobs = () => {
                                         Explore Jobs
                                     </h2>
                                     <p className='text-xs text-muted-foreground mt-0.5'>
-                                        Showing <span className='font-bold text-foreground'>{filterJobs.length}</span> {filterJobs.length === 1 ? 'opening' : 'openings'}
-                                        {allJobs?.length ? ` of ${allJobs.length} total` : ''}
+                                        Showing <span className='font-bold text-foreground'>
+                                            {filterJobs.length > 0 ? `${(currentPage - 1) * JOBS_PER_PAGE + 1}–${Math.min(currentPage * JOBS_PER_PAGE, filterJobs.length)}` : 0}
+                                        </span> of <span className='font-bold text-foreground'>{filterJobs.length}</span> {filterJobs.length === 1 ? 'opening' : 'openings'}
+                                        {allJobs?.length ? ` (${allJobs.length} total)` : ''}
                                     </p>
                                 </div>
                                 {hasActiveFilters && (
@@ -288,21 +314,30 @@ const Jobs = () => {
                                 </Button>
                             </div>
                         ) : (
-                            <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5'>
-                                <AnimatePresence>
-                                    {filterJobs.map((job) => (
-                                        <motion.div
-                                            key={job?._id}
-                                            initial={{ opacity: 0, y: 15 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            transition={{ duration: 0.2 }}
-                                        >
-                                            <Job job={job} />
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
-                            </div>
+                            <>
+                                <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5'>
+                                    <AnimatePresence mode="wait">
+                                        {paginatedJobs.map((job) => (
+                                            <motion.div
+                                                key={job?._id}
+                                                initial={{ opacity: 0, y: 15 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.95 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <Job job={job} />
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* Pagination Controls */}
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={(page) => setCurrentPage(page)}
+                                />
+                            </>
                         )}
                     </div>
                 </div>
