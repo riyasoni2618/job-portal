@@ -1,5 +1,6 @@
-import{Application} from "../models/application.model.js";
+import { Application } from "../models/application.model.js";
 import { Job } from "../models/job.model.js";
+import { getAccessibleResumeUrl } from "../utils/cloudinary.js";
 export const applyJob = async(req,res)=>{
     try {
         const userId  =req.id;
@@ -84,8 +85,19 @@ export const getApplicants = async (req,res)=>{
                 success:false
             })
         };
+
+        const jobObj = job.toObject();
+        if (jobObj.application && Array.isArray(jobObj.application)) {
+            jobObj.application = jobObj.application.map(app => {
+                if (app.applicant?.profile) {
+                    app.applicant.profile.resume = getAccessibleResumeUrl(app.applicant.profile.resume);
+                }
+                return app;
+            });
+        }
+
         return res.status(200).json({
-            job,
+            job: jobObj,
             success:true
         })
     } catch (error) {

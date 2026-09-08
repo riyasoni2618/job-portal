@@ -2,7 +2,7 @@ import React from 'react'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/button';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, ExternalLink } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { toast } from 'sonner';
 import { APPLICATION_API_END_POINT } from '@/utils/constants';
@@ -59,21 +59,38 @@ const ApplicantsTable = () => {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            applicants.application.map((item) => (
+                            applicants.application.map((item) => {
+                                const rawResume = Array.isArray(item?.applicant?.profile?.resume)
+                                    ? item?.applicant?.profile?.resume[0]
+                                    : item?.applicant?.profile?.resume;
+                                let resumeUrl = (typeof rawResume === 'string' && rawResume.trim().length > 0)
+                                    ? rawResume.trim()
+                                    : null;
+                                if (resumeUrl) {
+                                    if (resumeUrl.startsWith('//')) {
+                                        resumeUrl = 'https:' + resumeUrl;
+                                    } else if (!/^https?:\/\//i.test(resumeUrl)) {
+                                        resumeUrl = 'https://' + resumeUrl;
+                                    }
+                                }
+
+                                return (
                                 <TableRow key={item._id} className='border-border hover:bg-muted/50'>
                                     <TableCell className='font-semibold text-foreground'>{item?.applicant?.fullname || 'N/A'}</TableCell>
                                     <TableCell className='text-muted-foreground'>{item?.applicant?.email || 'N/A'}</TableCell>
                                     <TableCell className='text-muted-foreground'>{item?.applicant?.phoneNumber || 'N/A'}</TableCell>
                                     <TableCell>
                                         {
-                                            item.applicant?.profile?.resume ? (
+                                            resumeUrl ? (
                                                 <a 
-                                                    className="text-[#7209b7] dark:text-purple-400 hover:underline cursor-pointer text-xs font-medium" 
-                                                    href={item?.applicant?.profile?.resume} 
+                                                    className="text-[#7209b7] dark:text-purple-400 hover:underline cursor-pointer text-xs font-medium inline-flex items-center gap-1.5" 
+                                                    href={resumeUrl} 
                                                     target="_blank" 
                                                     rel="noopener noreferrer"
+                                                    title="Open resume in new tab"
                                                 >
-                                                    {item?.applicant?.profile?.resumeOriginalName || 'Download Resume'}
+                                                    <span className="truncate max-w-[150px] inline-block">{item?.applicant?.profile?.resumeOriginalName || 'View Resume'}</span>
+                                                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                                                 </a>
                                             ) : (
                                                 <span className='text-muted-foreground text-xs'>N/A</span>
@@ -109,7 +126,7 @@ const ApplicantsTable = () => {
                                         </Popover>
                                     </TableCell>
                                 </TableRow>
-                            ))
+                            )})
                         )
                     }
                 </TableBody>

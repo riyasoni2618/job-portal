@@ -2,7 +2,7 @@ import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import getDataUri from "../utils/datauri.js";
-import cloudinary from "../utils/cloudinary.js";
+import cloudinary, { getAccessibleResumeUrl } from "../utils/cloudinary.js";
 import { extractTextFromPDF, analyzeResumeWithAI, generateEmbedding, formatResumeForEmbedding } from "../utils/ai.js";
 
 export const register = async (req, res) => {
@@ -86,13 +86,18 @@ export const login = async (req, res) => {
         }
         const token = await jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '30d' });
 
+        const sanitizedProfile = user.profile ? {
+            ...(user.profile.toObject ? user.profile.toObject() : user.profile),
+            resume: getAccessibleResumeUrl(user.profile.resume)
+        } : user.profile;
+
         user = {
             _id: user._id,
             fullname: user.fullname,
             email: user.email,
             phoneNumber: user.phoneNumber,
             role: user.role,
-            profile: user.profile
+            profile: sanitizedProfile
         }
 
         const cookieOptions = {
@@ -157,7 +162,10 @@ export const updateProfile = async (req, res) => {
         // Handle file upload only if file is provided
         if (file) {
             const fileUri = getDataUri(file);
-            const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+            const cloudResponse = await cloudinary.uploader.upload(fileUri.content, {
+                resource_type: "auto",
+                folder: "resumes"
+            });
             if (cloudResponse) {
                 user.profile.resume = cloudResponse.secure_url; // save the cloudinary url
                 user.profile.resumeOriginalName = file.originalname; // Save the original file name
@@ -166,13 +174,18 @@ export const updateProfile = async (req, res) => {
 
         await user.save();
 
+        const sanitizedProfile = user.profile ? {
+            ...(user.profile.toObject ? user.profile.toObject() : user.profile),
+            resume: getAccessibleResumeUrl(user.profile.resume)
+        } : user.profile;
+
         user = {
             _id: user._id,
             fullname: user.fullname,
             email: user.email,
             phoneNumber: user.phoneNumber,
             role: user.role,
-            profile: user.profile
+            profile: sanitizedProfile
         }
 
         return res.status(200).json({
@@ -310,7 +323,7 @@ export const uploadAndAnalyzeResume = async (req, res) => {
             profile: {
                 bio: user.profile.bio,
                 skills: user.profile.skills,
-                resume: user.profile.resume,
+                resume: getAccessibleResumeUrl(user.profile.resume),
                 resumeOriginalName: user.profile.resumeOriginalName,
                 profilePhoto: user.profile.profilePhoto,
                 resumeAnalysisUpdatedAt: user.profile.resumeAnalysisUpdatedAt

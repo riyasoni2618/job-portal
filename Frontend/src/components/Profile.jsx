@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import Navbar from './shared/Navbar'
 import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
 import { Button } from './ui/button'
-import { Contact, Mail, Pen, Sparkles } from 'lucide-react'
+import { Contact, Mail, Pen, Sparkles, ExternalLink } from 'lucide-react'
 import { Badge } from './ui/badge'
 import { Label } from './ui/label'
 import AppliedJobTable from './AppliedJobTable'
@@ -30,10 +30,20 @@ const Profile = () => {
     }
 
     // Check if resume exists - handle both string and array formats
-    const resumeUrl = Array.isArray(user?.profile?.resume) 
+    const rawResume = Array.isArray(user?.profile?.resume) 
         ? user.profile.resume[0] 
         : user?.profile?.resume;
-    const hasResume = resumeUrl && resumeUrl.length > 0;
+    let resumeUrl = (typeof rawResume === 'string' && rawResume.trim().length > 0)
+        ? rawResume.trim()
+        : '';
+    if (resumeUrl) {
+        if (resumeUrl.startsWith('//')) {
+            resumeUrl = 'https:' + resumeUrl;
+        } else if (!/^https?:\/\//i.test(resumeUrl)) {
+            resumeUrl = 'https://' + resumeUrl;
+        }
+    }
+    const hasResume = Boolean(resumeUrl && resumeUrl.length > 0);
     const hasSkills = user?.profile?.skills && Array.isArray(user.profile.skills) && user.profile.skills.length > 0;
 
     return (
@@ -100,9 +110,11 @@ const Profile = () => {
                                 target='_blank' 
                                 rel='noopener noreferrer'
                                 href={resumeUrl} 
-                                className='text-[#7209b7] dark:text-purple-400 hover:underline cursor-pointer text-sm font-medium'
+                                className='text-[#7209b7] dark:text-purple-400 hover:underline cursor-pointer text-sm font-medium inline-flex items-center gap-1.5'
+                                title='Open resume in new tab'
                             >
-                                {user?.profile?.resumeOriginalName || 'View Resume'}
+                                <span>{user?.profile?.resumeOriginalName || 'View Resume'}</span>
+                                <ExternalLink className='h-3.5 w-3.5 shrink-0' />
                             </a>
                         ) : (
                             <span className='text-muted-foreground text-sm'>No resume uploaded</span>
